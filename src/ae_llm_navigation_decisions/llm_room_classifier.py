@@ -3,8 +3,8 @@ import os.path
 
 from time import time
 
-from ae_llm import LLMControl, LLMType
-from room_type import RoomType
+from .ae_llm import LLMControl, LLMType
+from .room_type import RoomType
 
 ##
 # A class that is sort of a middle man between the LLM that we will use for
@@ -100,7 +100,7 @@ class LLMRoomClassifier:
         # the correct answer with a $ sign - because they're quite chatty and mention all sorts of rooms before
         # the final answer.
         if "$" in full_text:
-            txt_to_parse = full_text[full_text.index("$"):]
+            txt_to_parse = full_text[full_text.rfind("$"):]
             ans = RoomType.parse_llm_response(txt_to_parse)
         #print("llm predict time:", round(time()-t0, 3), "s")
 

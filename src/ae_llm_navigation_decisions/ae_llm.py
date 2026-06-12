@@ -1,7 +1,6 @@
 import ollama, torch, os
 from enum import Enum
-from room_type import RoomType
-from ml_model_type import MLModelType
+from .room_type import RoomType
 from transformers import (AutoModelForCausalLM, AutoTokenizer, Mistral3ForConditionalGeneration,
                           MistralCommonBackend, BitsAndBytesConfig, AutoProcessor)
 from PIL import Image
@@ -64,10 +63,6 @@ class LLMType(Enum):
             return "mistralai/Ministral-3-3B-Instruct-2512-BF16"
         else:
             return None
-
-    @staticmethod
-    def type_of_model():
-        return MLModelType.LLM
 
 class LLMControl:
     #MODEL_TO_USE = "gemma:7b-instruct-v1.1-q6_K"
@@ -276,6 +271,8 @@ class LLMControl:
         3. Bedroom
         4. Bathroom
 
+        You should always provide justification.
+
         Please precede the final answer with a $ sign.
         """
         #    You should always provide justification
@@ -295,6 +292,8 @@ class LLMControl:
         3. Bedroom
         4. Bathroom
 
+        You should always provide justification.
+        
         Please precede the final answer with a $ sign.
         """
         #    You should always provide justification
@@ -312,6 +311,8 @@ class LLMControl:
         2. Kitchen
         3. Bedroom
         4. Bathroom
+
+        You should always provide justification.
 
         Please precede the final answer with a $ sign.
         """
