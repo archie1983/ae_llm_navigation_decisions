@@ -14,5 +14,5 @@ Then to try it out launch python and type:
 ```
 from ae_llm_navigation_decisions import LLMRoomClassifier, LLMType
 lrc = LLMRoomClassifier(LLMType.MINISTRAL_3_3b_instruct_nf4_bnb)
-rt_llm, llm_text = lrc.classify_room_by_this_object_set_and_pic(obj_set="Scales, bathtub, toothbrush", img_uri=None)
+rt_llm, llm_text = lrc.classify_room_by_this_object_set_and_pic(obj_set={"Scales", "bathtub", "toothbrush"}, img_uri=None)
 ```
