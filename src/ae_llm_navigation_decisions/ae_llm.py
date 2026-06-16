@@ -504,7 +504,7 @@ class LLMControl:
     def set_max_tokens(self, max_tokens):
         self.max_tokens = max_tokens
 
-    def get_answer(self, img_uri = None):
+    def get_answer(self, img_uri = None, img_bytes = None):
         #print("Q CONTROL2: ", self.question)
         if self.llm_type.transformers_tag() is not None:
             if self.llm_type == LLMType.QWEN3_06b_an_finetune:
@@ -566,8 +566,12 @@ class LLMControl:
                   self.llm_type == LLMType.MINISTRAL_3_3b_reasoning_bf16 or
                   self.llm_type == LLMType.MINISTRAL_3_3b_instruct_nf4_bnb):
 
-                if img_uri is not None:
-                    image = Image.open(img_uri)  # .convert("RGB")
+                if img_uri is not None or img_bytes is not None:
+                    if img_uri is not None:
+                        image = Image.open(img_uri)  # .convert("RGB")
+                    else:
+                        image = img_bytes
+
                     messages = [
                         {
                             "role": "user",
