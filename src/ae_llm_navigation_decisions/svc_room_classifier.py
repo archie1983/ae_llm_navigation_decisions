@@ -102,7 +102,7 @@ class SVCRoomClassifier:
         Returns:
             RoomType enum value
         """
-        if isinstance(objects, list):
+        if isinstance(objects, list) or isinstance(objects, set):
             objects_str = ' '.join(objects)
         else:
             objects_str = objects
@@ -115,7 +115,7 @@ class SVCRoomClassifier:
 
     def predict_proba(self, objects):
         """Get probability scores for each room type"""
-        if isinstance(objects, list):
+        if isinstance(objects, list) or isinstance(objects, set):
             objects_str = ' '.join(objects)
         else:
             objects_str = objects
