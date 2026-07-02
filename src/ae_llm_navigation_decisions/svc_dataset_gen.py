@@ -35,7 +35,7 @@ class ProcTHORObjectSampler:
         # Get all available object types
         self.all_objects = list(self.annotations['instances'].keys())
 
-        self.DATA_PAIRS_REQUIRED = 100
+        self.DATA_PAIRS_REQUIRED = 10000
 
     def get_room_objects(self, room_type: str) -> Dict[str, int]:
         """
@@ -116,14 +116,14 @@ class ProcTHORObjectSampler:
 
         room_objects = sampler.sample_objects(self.room_types[rt], num_objects=item_cnt_to_generate)
         # all capitals and throw away duplicates
-        room_objects = {ro.upper() for ro in room_objects}
-        room_objects_str = ""
-        for ro in room_objects:
-            room_objects_str = room_objects_str + " " + ro
-        room_objects_str = room_objects_str[1:]
+        room_objects = [ro.upper() for ro in room_objects]
+        # room_objects_str = ""
+        # for ro in room_objects:
+        #     room_objects_str = room_objects_str + " " + ro
+        # room_objects_str = room_objects_str[1:]
 
         #print(self.room_types[rt], " objects:", set(room_objects), len(set(room_objects)), item_cnt_to_generate)
-        return (self.room_types[rt], room_objects_str)
+        return (self.room_types[rt], room_objects)
 
     def generate_svc_training_dataset(self):
         data_set = []
@@ -131,13 +131,13 @@ class ProcTHORObjectSampler:
             data_pair = self.generate_1_data_pair()
             data_set.append(data_pair)
 
-        with open('data.json', 'w') as f:
+        with open('models/data.json', 'w') as f:
             #json.dump(data_set, f)
             json.dump(data_set, f, ensure_ascii=False, indent=4)
 
 # Initialize the sampler
 sampler = ProcTHORObjectSampler(
-    annotations_path='placement-annotations.json',
+    annotations_path='models/placement-annotations.json',
     #random_seed=83
 )
 

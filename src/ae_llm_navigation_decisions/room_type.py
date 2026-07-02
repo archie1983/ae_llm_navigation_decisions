@@ -98,6 +98,8 @@ class RoomType(Enum):
             ret_val = RoomType.LIVING_ROOM
         if "LIVINGROOM" in text.upper():
             ret_val = RoomType.LIVING_ROOM
+        if "LIVING_ROOM" in text.upper():
+            ret_val = RoomType.LIVING_ROOM
         if "KITCHEN" in text.upper():
             ret_val = RoomType.KITCHEN
         if "BEDROOM" in text.upper():

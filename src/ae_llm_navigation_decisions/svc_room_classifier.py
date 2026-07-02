@@ -1,117 +1,145 @@
-import pickle, json
-import os.path
-from sklearn import model_selection as cross_validation
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score
-
-from time import time
+import pickle
+import json
+import numpy as np
+from sklearn import model_selection
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV, cross_val_score
+from sklearn.utils.class_weight import compute_class_weight
 from room_type import RoomType
 
+
 class SVCRoomClassifier:
-    ###
-    # Initialises the SVC- either by training from the training data or by loading it from
-    # a pickle file- depending on the TRAIN_FROM_SCRATCH parameter.
-    ###
-    def __init__(self, TRAIN_FROM_SCRATCH = False):
+    def __init__(self, train_from_scratch=False, model_path='models/room_classifier.pkl'):
+        self.model_path = model_path
 
-        self.load_training_data_and_vectorize()
+        if train_from_scratch:
+            self._train()
+            self._save_model()
+        else:
+            self._load_model()
 
-        # We can either load pre-trained settings or train from scratch
-        if TRAIN_FROM_SCRATCH:
-            # We will use an Support Vector Classifier
-            self.clf = SVC(kernel="rbf", C=10000.0)
+        # Evaluate on test set
+        self._evaluate()
 
-            # Now let's train our SVC
-            t0 = time()
-            self.clf.fit(self.features_train_vectorized, self.labels_train)
-            #print("training time:", round(time()-t0, 3), "s")
+    def _train(self):
+        """Train the classifier from scratch"""
+        # Load and prepare data
+        features_train, features_test, labels_train, labels_test = self._load_and_split_data()
 
-            # Now let's save our trained parameters
-            pickle.dump(self.clf, open("trained_svc_room_classifier.pkl", "wb"))
-        else: # so we want to load pre-trained parameters
-            with open("trained_svc_room_classifier.pkl", "rb") as file:
-                self.clf = pickle.load(file)
+        # Vectorize
+        self.vectorizer = CountVectorizer(binary=True)  # Presence/absence only
+        features_train_vec = self.vectorizer.fit_transform(features_train)
+        features_test_vec = self.vectorizer.transform(features_test)
 
-        t0 = time()
-        self.pred = self.clf.predict(self.features_test_vectorized)
-        #print("prediction time:", round(time()-t0, 3), "s")
+        # Cross-validation to find best parameters
+        print("Performing cross-validation...")
+        param_grid = {'C': [0.1, 0.5, 1.0, 5.0, 10.0], 'kernel': ['rbf', 'linear']}
+        grid_search = GridSearchCV(SVC(class_weight='balanced', probability=True), param_grid, cv=5, scoring='accuracy')
+        grid_search.fit(features_train_vec, labels_train)
 
-        # Finally learn and test how good model have we got
-        t0 = time()
-        self.acc = accuracy_score(self.pred, self.labels_test)
-        #print("accuracy calculation time:", round(time()-t0, 3), "s")
+        print(f"Best parameters: {grid_search.best_params_}")
+        print(f"Best cross-validation score: {grid_search.best_score_:.3f}")
 
-        print("Accuracy = ",self.acc)
-        #print(self.clf.classes_)
-        #########################################################
+        # Train final model
+        self.clf = grid_search.best_estimator_
+        self.clf.fit(features_train_vec, labels_train)
 
-    def getAccuracy(self):
-        return self.acc
+        # Store test data for evaluation
+        self.features_test_vec = features_test_vec
+        self.labels_test = labels_test
 
-    ###
-    # Loads training data from pickle files and vecorizes the data for use in the SVC
-    ###
-    def load_training_data_and_vectorize(self):
-        with open('data.json', 'r') as f:
-            # json.dump(data_set, f)
+    def _load_and_split_data(self):
+        """Load data and split into train/test sets"""
+        with open('models/data.json', 'r') as f:
             training_data = json.load(f)
             labels = [label for (label, features) in training_data]
             features = [features for (label, features) in training_data]
 
-        # Now create training and testing sets
-        features_train, features_test, self.labels_train, self.labels_test = cross_validation.train_test_split(features, labels, test_size=0.1, random_state=1983)
+        # Convert features from lists to strings
+        features_str = [' '.join(f) for f in features]
+        print(features_str)
+        return model_selection.train_test_split(
+            features_str, labels, test_size=0.2, random_state=42, stratify=labels
+        )
 
-        # Now we will turn the texts into numerical vectors so that we can use that for machine learning
-        #vectorizer = TfidfVectorizer(max_df=1.0, stop_words='english')
-        self.vectorizer = TfidfVectorizer()
+    def _evaluate(self):
+        """Evaluate model on test set"""
+        if hasattr(self, 'features_test_vec') and hasattr(self, 'labels_test'):
+            predictions = self.clf.predict(self.features_test_vec)
+            accuracy = accuracy_score(self.labels_test, predictions)
+            print(f"\nTest Accuracy: {accuracy:.3f}")
+            print("\nClassification Report:")
+            print(classification_report(self.labels_test, predictions))
 
-        # If we want to give all features and all labels to training (leaving no unique test cases), then uncomment below
-        #features_train = features
-        #labels_train = labels
+    def _save_model(self):
+        """Save model and vectorizer"""
+        with open(self.model_path, 'wb') as f:
+            pickle.dump({
+                'classifier': self.clf,
+                'vectorizer': self.vectorizer,
+                'classes': self.clf.classes_
+            }, f)
+        print(f"Model saved to {self.model_path}")
 
-        self.features_train_vectorized = self.vectorizer.fit_transform(features_train)
-        self.features_test_vectorized  = self.vectorizer.transform(features_test)
+    def _load_model(self):
+        """Load model and vectorizer"""
+        with open(self.model_path, 'rb') as f:
+            data = pickle.load(f)
+            self.clf = data['classifier']
+            self.vectorizer = data['vectorizer']
+        print(f"Model loaded from {self.model_path}")
 
-        #print "tfidf.get_stop_words(): ",tfidf.get_stop_words()
-        #print "vector: ",vector
-        #print(self.features_train_vectorized.shape)
-        #print(self.features_test_vectorized.shape)
-        #print(self.vectorizer.get_feature_names_out())
+    def predict(self, objects):
+        """
+        Predict room type from a list of objects.
 
-    def classify_room_by_this_object_set(self, obj_set):
-        # now we'll get the objects into a string separated by a space
-        objs_in_room_as_string = ""
-        for obj in obj_set:
-            objs_in_room_as_string += obj + " "
+        Args:
+            objects: List of object names or space-separated string
 
-        objs_in_room_as_string = objs_in_room_as_string[:-1]
+        Returns:
+            RoomType enum value
+        """
+        if isinstance(objects, list):
+            objects_str = ' '.join(objects)
+        else:
+            objects_str = objects
 
-        ans = self.predict(objs_in_room_as_string)
+        vectorized = self.vectorizer.transform([objects_str])
+        result = self.clf.predict(vectorized)[0]
 
-        #print("\n" + str(ans) + " :: " + list(self.room_types.keys())[list(self.room_types.values()).index(ans)])
-        #print("\n" + ans.name + " :: " + str(ans.value))
+        print(f"Predicted: {result} from objects: {objects_str}")
+        return RoomType.interpret_label(result)
 
-        return ans
+    def predict_proba(self, objects):
+        """Get probability scores for each room type"""
+        if isinstance(objects, list):
+            objects_str = ' '.join(objects)
+        else:
+            objects_str = objects
 
-    ###
-    # Uses the cassifier to predict a room based on the input elements found in the room
-    ###
-    def predict(self, items_as_string_separated_by_space):
-        input_vectorized  = self.vectorizer.transform([items_as_string_separated_by_space])
-        #print(input_vectorized)
+        vectorized = self.vectorizer.transform([objects_str])
+        probabilities = self.clf.predict_proba(vectorized)[0]
 
-        #t0 = time()
-        result = self.clf.predict(input_vectorized)
-        #print("svc predict time:", round(time()-t0, 5), "s")
+        return dict(zip(self.clf.classes_, probabilities))
 
-        print("Prediction of: " + items_as_string_separated_by_space + " : " + result[0])
-
-        return RoomType.interpret_label(result[0])
 
 def main():
-    rc = SVCRoomClassifier(True)
-    rc.predict("WATCH DRESSER DININGTABLE BOOTS")
+    # Train from scratch
+    classifier = SVCRoomClassifier(train_from_scratch=False)
+
+    # Test prediction
+    result = classifier.predict(['WATCH', 'DRESSER', 'DININGTABLE', 'BOOTS'])
+    print(f"Room type: {result}")
+    print(classifier.predict_proba(['WATCH', 'DRESSER', 'DININGTABLE', 'BOOTS']))
+
+    result = classifier.predict(['TOWELHOLDER', 'TOILET', 'TOWEL', 'TOILETPAPER', 'CLOTHESDRYER'])
+    print(f"Room type: {result}")
+    print(classifier.predict_proba(['TOWELHOLDER', 'TOILET', 'TOWEL', 'TOILETPAPER', 'CLOTHESDRYER']))
+
+    print(classifier.predict_proba(['CHAIR', 'WINDOW']))
+
 
 if __name__ == "__main__":
     main()
