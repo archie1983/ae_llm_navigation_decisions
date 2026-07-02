@@ -53,7 +53,8 @@ class SVCRoomClassifier:
 
     def _load_and_split_data(self):
         """Load data and split into train/test sets"""
-        with open('models/data.json', 'r') as f:
+        json_path = files('ae_llm_navigation_decisions.models').joinpath('data.json')
+        with open(json_path, 'r') as f:
             training_data = json.load(f)
             labels = [label for (label, features) in training_data]
             features = [features for (label, features) in training_data]
