@@ -30,8 +30,12 @@ class ProcTHORObjectSampler:
             'bathroom': 'inBathrooms'
         }
 
+        self.room_types = ['kitchen', 'bathroom', 'living_room', 'bedroom']
+
         # Get all available object types
         self.all_objects = list(self.annotations['instances'].keys())
+
+        self.DATA_PAIRS_REQUIRED = 100
 
     def get_room_objects(self, room_type: str) -> Dict[str, int]:
         """
@@ -48,9 +52,9 @@ class ProcTHORObjectSampler:
             raise ValueError(f"Invalid room type: {room_type}. Must be one of {list(self.room_mapping.keys())}")
 
         room_objs_with_weights = self.annotations[room_key]
-        # add back common objects
-        room_objs_with_weights['Doorway'] = 1
-        room_objs_with_weights['Doorframe'] = 1
+        # add back common objects, but select which ones we want included and which not
+        room_objs_with_weights['Doorway'] = 0
+        room_objs_with_weights['Doorframe'] = 0
         room_objs_with_weights['Window'] = 1
 
         return self.annotations[room_key]
@@ -102,23 +106,45 @@ class ProcTHORObjectSampler:
 
         return sampled
 
+    def generate_1_data_pair(self):
+        rt = random.randrange(0, len(self.room_types))
+
+        all_room_objects = [k for k, v in sampler.get_room_objects(self.room_types[rt]).items() if v > 0]
+
+        max_item_count_in_room = len(all_room_objects)  # how many classes of items do we have in this type of room
+        item_cnt_to_generate = random.randrange(1, max_item_count_in_room + 1)
+
+        room_objects = sampler.sample_objects(self.room_types[rt], num_objects=item_cnt_to_generate)
+        # all capitals and throw away duplicates
+        room_objects = {ro.upper() for ro in room_objects}
+        room_objects_str = ""
+        for ro in room_objects:
+            room_objects_str = room_objects_str + " " + ro
+        room_objects_str = room_objects_str[1:]
+
+        #print(self.room_types[rt], " objects:", set(room_objects), len(set(room_objects)), item_cnt_to_generate)
+        return (self.room_types[rt], room_objects_str)
+
+    def generate_svc_training_dataset(self):
+        data_set = []
+        for _ in range(self.DATA_PAIRS_REQUIRED):
+            data_pair = self.generate_1_data_pair()
+            data_set.append(data_pair)
+
+        with open('data.json', 'w') as f:
+            #json.dump(data_set, f)
+            json.dump(data_set, f, ensure_ascii=False, indent=4)
+
 # Initialize the sampler
 sampler = ProcTHORObjectSampler(
     annotations_path='placement-annotations.json',
     #random_seed=83
 )
 
-room_types = ['kitchen', 'bathroom', 'living_room', 'bedroom']
-rt = random.randrange(0, len(room_types))
+sampler.generate_svc_training_dataset()
 
-all_room_objects = [k for k,v in sampler.get_room_objects(room_types[rt]).items() if v > 0]
 
-max_item_count_in_room = len(all_room_objects)  # how many classes of items do we have in this type of room
-item_cnt_to_generate = random.randrange(1, max_item_count_in_room + 1)
 
-room_objects = sampler.sample_objects(room_types[rt], num_objects=item_cnt_to_generate)
 
-print(room_types[rt], " objects:", set(room_objects), len(set(room_objects)), item_cnt_to_generate)
-
-all_objects = set([sample.upper() for sample in sampler.all_objects])
-print(all_objects, len(all_objects))
+#all_objects = set([sample.upper() for sample in sampler.all_objects])
+#print(all_objects, len(all_objects))
