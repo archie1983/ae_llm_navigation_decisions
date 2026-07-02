@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV
 from importlib.resources import files
-from room_type import RoomType
+from .room_type import RoomType
 
 class SVCRoomClassifier:
     def __init__(self, train_from_scratch=False, model_path=''):
