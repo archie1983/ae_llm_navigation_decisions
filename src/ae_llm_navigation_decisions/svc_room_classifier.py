@@ -1,17 +1,18 @@
-import pickle
-import json
-import numpy as np
+import pickle, json
 from sklearn import model_selection
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV, cross_val_score
-from sklearn.utils.class_weight import compute_class_weight
+from sklearn.model_selection import GridSearchCV
+from importlib.resources import files
 from room_type import RoomType
 
-
 class SVCRoomClassifier:
-    def __init__(self, train_from_scratch=False, model_path='models/room_classifier.pkl'):
+    def __init__(self, train_from_scratch=False, model_path=''):
+
+        if model_path == '':
+            model_path = files('ae_llm_navigation_decisions.models').joinpath('room_classifier.pkl')
+
         self.model_path = model_path
 
         if train_from_scratch:
