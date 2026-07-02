@@ -26,4 +26,4 @@ dependencies = [
 where = ["src"]
 
 [tool.setuptools.package-data]
-ae_semantic_navigation = ["models/*.json", "models/*.pkl"]
+ae_llm_navigation_decisions = ["models/*.json", "models/*.pkl"]
